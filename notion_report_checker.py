@@ -51,14 +51,20 @@ WEEK_SUBCOLS = ["단어수", "이해도(5)", "가독성(5)", "시각자료(3)", 
 CACHE_FILE = "eval_cache.json"
 
 # 출결 체크 대상 고정 멤버 (글자수 부족 / 미제출 체크 범위)
-# ※ 실제 학회원 이름으로 교체하세요. Notion의 Person 속성에 표시되는 이름과 정확히 일치해야 합니다.
-FIXED_MEMBERS = {
-    "김철수", "김영희", "박야이", "이야이", "최야이", "정야이", "한야이",
-    "유야이", "임야이", "오야이", "신야이", "강야이", "고야이", "곽야이",
-    "구야이", "김야이", "나야이", "노야이", "문야이",
-    "박야이2", "배야이", "서야이", "손야이", "송야이", "안야이", "양야이",
-    "엄야이", "윤야이", "이야이2", "장야이", "전야이",
-}
+# members.txt 파일에서 로드 (한 줄에 한 명, #으로 시작하는 줄은 주석)
+def load_members(path="members.txt"):
+    members = set()
+    try:
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                name = line.strip()
+                if name and not name.startswith("#"):
+                    members.add(name)
+    except FileNotFoundError:
+        print(f"[경고] {path} 파일을 찾을 수 없습니다. FIXED_MEMBERS가 비어 있습니다.")
+    return members
+
+FIXED_MEMBERS = load_members()
 
 # EVAL_SYSTEM_PROMPT는 eval_criteria.py에서 import됨
 
