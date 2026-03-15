@@ -546,6 +546,13 @@ def update_summary_sheet(records_with_eval, page_data, weeks_set):
         row.append("\n".join(submitted) if submitted else "없음")
     rows.append(row)
 
+    # ── 제출자 (FIXED_MEMBERS 외, 수료생/프로젝트팀) ──
+    row = ["✅ 제출(수료생/프로젝트팀)"]
+    for week in sorted_weeks:
+        extra = sorted(p for (p, w) in page_data if w == week and p not in FIXED_MEMBERS)
+        row.append("\n".join(extra) if extra else "없음")
+    rows.append(row)
+
     rows.append([""] * len(header))  # 구분선
 
     # ── 미제출자 (FIXED_MEMBERS 대상만) ──
@@ -610,6 +617,11 @@ def print_summary(records_with_eval, page_data, weeks):
         # 3. 제출자 (FIXED_MEMBERS 대상만)
         submitted_fixed = sorted(submitted & FIXED_MEMBERS)
         print(f"  ✅ 제출 ({len(submitted_fixed)}명): {', '.join(submitted_fixed)}")
+
+        # 3-1. 제출자 (FIXED_MEMBERS 외, 수료생/프로젝트팀)
+        submitted_extra = sorted(submitted - FIXED_MEMBERS)
+        if submitted_extra:
+            print(f"  ✅ 제출(수료생/프로젝트팀) ({len(submitted_extra)}명): {', '.join(submitted_extra)}")
 
         # 4. 미제출자 (FIXED_MEMBERS 대상만)
         not_submitted = FIXED_MEMBERS - submitted
