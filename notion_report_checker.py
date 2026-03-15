@@ -73,12 +73,21 @@ FIXED_MEMBERS = load_members()
 # ────────────────────────────────────────────
 
 def clean_name(name):
-    """괄호 안 내용 제거 및 앞뒤 공백 정리
+    """괄호 안 내용 제거, 중복 단어 제거, 앞뒤 공백 정리
     예: '(의과대학 의학과) 노승현' → '노승현'
     예: '노승현 (의학과)'         → '노승현'
+    예: '심재윤 심재윤'           → '심재윤'
     """
     name = re.sub(r'\s*\([^)]*\)\s*', ' ', name)
-    return name.strip()
+    name = name.strip()
+    # 공백으로 구분된 토큰이 반복될 경우 첫 번째만 유지
+    tokens = name.split()
+    seen, deduped = set(), []
+    for t in tokens:
+        if t not in seen:
+            seen.add(t)
+            deduped.append(t)
+    return " ".join(deduped)
 
 
 # ────────────────────────────────────────────
@@ -525,6 +534,9 @@ def update_summary_sheet(records_with_eval, page_data, weeks_set):
 
     rows.append([""] * len(header))  # 구분선
 
+    def fmt_names(names):
+        return ", ".join(f'"{n}"' for n in names)
+
     # ── 글자수 부족 (FIXED_MEMBERS 대상만) ──
     row = ["⚠️ 글자수 부족"]
     for week in sorted_weeks:
@@ -533,8 +545,8 @@ def update_summary_sheet(records_with_eval, page_data, weeks_set):
             for (p, w) in page_data
             if w == week and p in FIXED_MEMBERS and page_data[(p, w)]["word_count"] < 700
         ]
-        low_sorted = [f"{p} ({wc:,}단어)" for p, wc in sorted(low, key=lambda x: x[1])]
-        row.append("\n".join(low_sorted) if low_sorted else "없음")
+        low_sorted = [f'"{p}" ({wc:,}단어)' for p, wc in sorted(low, key=lambda x: x[1])]
+        row.append(", ".join(low_sorted) if low_sorted else "없음")
     rows.append(row)
 
     rows.append([""] * len(header))  # 구분선
@@ -543,14 +555,14 @@ def update_summary_sheet(records_with_eval, page_data, weeks_set):
     row = ["✅ 제출"]
     for week in sorted_weeks:
         submitted = sorted(p for (p, w) in page_data if w == week and p in FIXED_MEMBERS)
-        row.append("\n".join(submitted) if submitted else "없음")
+        row.append(fmt_names(submitted) if submitted else "없음")
     rows.append(row)
 
     # ── 제출자 (FIXED_MEMBERS 외, 수료생/프로젝트팀) ──
     row = ["✅ 제출(수료생/프로젝트팀)"]
     for week in sorted_weeks:
         extra = sorted(p for (p, w) in page_data if w == week and p not in FIXED_MEMBERS)
-        row.append("\n".join(extra) if extra else "없음")
+        row.append(fmt_names(extra) if extra else "없음")
     rows.append(row)
 
     rows.append([""] * len(header))  # 구분선
@@ -560,7 +572,7 @@ def update_summary_sheet(records_with_eval, page_data, weeks_set):
     for week in sorted_weeks:
         submitted = {p for (p, w) in page_data if w == week}
         not_submitted = sorted(FIXED_MEMBERS - submitted)
-        row.append("\n".join(not_submitted) if not_submitted else "전원 제출")
+        row.append(fmt_names(not_submitted) if not_submitted else "전원 제출")
     rows.append(row)
 
     ws.clear()
@@ -614,19 +626,22 @@ def print_summary(records_with_eval, page_data, weeks):
             for name, wc in low:
                 print(f"     - {name}: {wc:,}단어")
 
+        def fmt(names):
+            return ", ".join(f'"{n}"' for n in names)
+
         # 3. 제출자 (FIXED_MEMBERS 대상만)
         submitted_fixed = sorted(submitted & FIXED_MEMBERS)
-        print(f"  ✅ 제출 ({len(submitted_fixed)}명): {', '.join(submitted_fixed)}")
+        print(f"  ✅ 제출 ({len(submitted_fixed)}명): {fmt(submitted_fixed)}")
 
         # 3-1. 제출자 (FIXED_MEMBERS 외, 수료생/프로젝트팀)
         submitted_extra = sorted(submitted - FIXED_MEMBERS)
         if submitted_extra:
-            print(f"  ✅ 제출(수료생/프로젝트팀) ({len(submitted_extra)}명): {', '.join(submitted_extra)}")
+            print(f"  ✅ 제출(수료생/프로젝트팀) ({len(submitted_extra)}명): {fmt(submitted_extra)}")
 
         # 4. 미제출자 (FIXED_MEMBERS 대상만)
         not_submitted = FIXED_MEMBERS - submitted
         if not_submitted:
-            print(f"  ❌ 미제출 ({len(not_submitted)}명): {', '.join(sorted(not_submitted))}")
+            print(f"  ❌ 미제출 ({len(not_submitted)}명): {fmt(sorted(not_submitted))}")
         else:
             print(f"  ✅ 전원 제출 완료")
 
